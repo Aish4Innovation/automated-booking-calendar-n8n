@@ -1,0 +1,189 @@
+{
+  "name": "AUTOMATED BOOKING CALENDER",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "value": "aishwaryam2002@gmail.com",
+          "mode": "list",
+          "cachedResultName": "aishwaryam2002@gmail.com"
+        },
+        "triggerOn": "eventCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0b65e104-e6dc-4dff-8cd7-39dc2a3e5582",
+      "name": "Google Calendar Trigger",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "n39ytlU0l3K13Aj1",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ckZeQOmobr6Xlazd9SjtBbSi1u6_-Eii5k-Pj0DPXc0",
+          "mode": "list",
+          "cachedResultName": "Master CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ckZeQOmobr6Xlazd9SjtBbSi1u6_-Eii5k-Pj0DPXc0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ckZeQOmobr6Xlazd9SjtBbSi1u6_-Eii5k-Pj0DPXc0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $json.attendees.find(a => !a.organizer).email }}",
+            "Meeting Date": "={{ DateTime.fromISO($json.start.dateTime).toFormat('yyyy-MM-dd') }}",
+            "Meeting Time": "={{ DateTime.fromISO($json.start.dateTime).toFormat('HH:mm') }}",
+            "Name": "={{ (() => {\n  const ev = $json;\n  const d = ev.description || '';\n\n  // 1) Prefer explicit First/Last from the booking form (if present)\n  const fn = (d.match(/First name:\\s*([^\\n\\r]+)/i) || [])[1] || '';\n  const ln = (d.match(/Last name:\\s*([^\\n\\r]+)/i) || [])[1] || '';\n  const formName = (fn + ' ' + ln).trim();\n  \n  if (formName) return formName;\n\n  // 2) Otherwise use the attendee's display name (or email)\n  const att = (ev.attendees || []).find(a => !a.organizer) || {};\n  if (att.displayName) return att.displayName;\n\n  // 3) Otherwise parse it from the event summary\n  const s = ev.summary || '';\n  \n  // Handle \"Meeting with...\"\n  const mw = s.replace(/^Meeting with\\s*/i, '').trim();\n  if (mw && mw !== s) return mw;\n  \n  // Handle \"Title (Name)\"\n  const parenMatch = s.match(/\\(([^)]+)\\)\\s*$/);\n  const paren = parenMatch ? parenMatch[1] : null;\n  if (paren) return paren.trim();\n\n  // 4) Final fallback: attendee email\n  return att.email || '';\n})() }}",
+            "Phone": "={{ (() => {\n  const html = $json.description || '';\n\n  // Normalize to plain text\n  const text = html\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/?[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/\\s{2,}/g, ' ')\n    .trim();\n\n  // 1) Prefer the value after the \"Phone\" label\n  let v = (text.match(/Phone(?:\\s*number)?:\\s*([^\\n\\r]+)/i) || ['', ''])[1].trim();\n\n  // 2) Fallback to the first phone-like sequence\n  if (!v) {\n    const m = text.match(/((?:\\+?\\d[\\d\\-\\s\\.]{6,})\\d)/);\n    v = (m ? m[1] || '' : '').trim();\n  }\n\n  // 3) Clean up spacing\n  v = v.replace(/\\s{2,}/g, ' ').trim();\n\n  // 4) Guard against Sheets interpreting as a formula\n  if (/^[=\\+\\-@]/.test(v)) v = \"'\" + v;\n\n  return v || 'N/A';\n})() }}",
+            "Message": "={{ (() => {\n  const html = $json.description || '';\n\n  // Normalize to plain text\n  const text = html\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/?[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/\\s{2,}/g, ' ')\n    .trim();\n\n  // Start: right after the label\n  let after = (text.split(/What would you like to meet about\\?\\s*/i)[1] || '').trim();\n  if (!after) return 'N/A';\n\n  // Hard stop list\n  const stops = [\n    '\\n', \n    'Pressure', \n    'Ready to build', \n    'Please find a time', \n    'You\\'ll receive', \n    'You will receive', \n    'confirmation email', \n    'Booked by'\n  ];\n\n  // Find earliest stop index\n  let cut = after.length;\n  for (const s of stops) {\n    const i = after.indexOf(s);\n    if (i !== -1 && i < cut) {\n      cut = (s === 'Pressure') ? i + s.length : i;\n    }\n  }\n\n  const answer = after.substring(0, cut).trim();\n  return answer || 'N/A';\n})() }}",
+            "Status": "Confirmed",
+            "Google Calender ID": "={{ $json.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Date",
+              "displayName": "Meeting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Time",
+              "displayName": "Meeting Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Google Calender ID",
+              "displayName": "Google Calender ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        256,
+        0
+      ],
+      "id": "7b82da31-e0e4-44a9-abd2-7e291761c0d0",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "szrtr9eknT5KZKmA",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Calendar Trigger": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8004ad94-823c-4041-b3ad-44c4f21c4928",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "537cd3ec6d8fc7cb87255d43cfb3750fa3a6a2deafd9bae5c13998baf7827549"
+  },
+  "id": "TZizdoa-VGAQJEUpi7NfL",
+  "tags": []
+}
