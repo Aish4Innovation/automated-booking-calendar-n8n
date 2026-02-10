@@ -4,6 +4,9 @@ This project demonstrates how to build a completely free automated booking syste
 
 Whenever a meeting is created in Google Calendar, the event details are automatically stored in a Google Sheets-based CRM.
 
+<img width="1869" height="839" alt="image" src="https://github.com/user-attachments/assets/52f1fd23-c9f6-4cc2-ae54-29c797b7edc7" />
+
+
 ## 🔧 Tools Used
 - n8n (workflow automation)
 - Google Calendar (event trigger)
